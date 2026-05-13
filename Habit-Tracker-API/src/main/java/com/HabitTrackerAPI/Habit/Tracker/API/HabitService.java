@@ -3,7 +3,8 @@ package com.HabitTrackerAPI.Habit.Tracker.API;
 import java.time.LocalDate;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 // Service layer contains business logic
@@ -11,11 +12,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class HabitService {
 
-    @Autowired
-    private HabitRepository habitRepo;
+    private final HabitRepository habitRepo;
+    private final HabitLogRepository logRepo;
 
-    @Autowired
-    private HabitLogRepository logRepo;
+    public HabitService(HabitRepository habitRepo,
+            HabitLogRepository logRepo) {
+
+        this.habitRepo = habitRepo;
+        this.logRepo = logRepo;
+    }
+
+    private static final Logger logger = LoggerFactory.getLogger(HabitService.class);
 
     // Fetch all habits from database
     public List<HabitResponseDTO> getAllHabits() {
@@ -52,6 +59,11 @@ public class HabitService {
 
         logRepo.save(log);
 
+        habit.setCompletedDate(LocalDate.now());
+        habitRepo.save(habit);
+
+        logger.info("Habit marked completed");
+
         return "Habit marked completed";
     }
 
@@ -81,17 +93,21 @@ public class HabitService {
     }
 
     public boolean isCompletedToday(Long habitId) {
+
         return logRepo.existsByHabitIdAndDate(habitId, LocalDate.now());
     }
 
     public String deleteHabit(Long id) {
 
-        Habit habit = habitRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Habit not found"));
+        if (!habitRepo.existsById(id)) {
+            throw new RuntimeException("Habit not found");
+        }
 
-        habitRepo.delete(habit);
+        habitRepo.deleteById(id);
 
-        return "Habit deleted";
+        logger.info("Habit deleted");
+
+        return "Habit deleted successfully";
     }
 
     private HabitResponseDTO convertToDTO(Habit habit) {
@@ -102,8 +118,7 @@ public class HabitService {
         dto.setTime(habit.getTime());
 
         dto.setCompletedToday(
-                logRepo.existsByHabitIdAndDate(habit.getId(), LocalDate.now())
-        );
+                logRepo.existsByHabitIdAndDate(habit.getId(), LocalDate.now()));
 
         dto.setStreak(getStreak(habit.getId()));
 
@@ -111,8 +126,7 @@ public class HabitService {
             dto.setLogs(
                     habit.getLogs().stream()
                             .map(this::convertLogToDTO)
-                            .toList()
-            );
+                            .toList());
         }
 
         return dto;

@@ -10,6 +10,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 // Entity class represents Habit table in database
@@ -23,12 +24,15 @@ public class Habit {
     private Long id;
 
     // Name of the habit
+    @NotBlank
     private String name;
+    
     private LocalDate createdDate;
     private LocalTime time;
 
     @OneToMany(mappedBy = "habit", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HabitLog> logs;
 
-}
+    private LocalDate completedDate;
 
+}
